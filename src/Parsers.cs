@@ -118,9 +118,22 @@ namespace tja2fumen
                         parsedTja.courses[currentCourse] = course;
                         break;
 
+                    case "SCOREMODE":
+                        course = parsedTja.courses[currentCourse];
+                        course.scoreMode = int.Parse(value);
+                        break;
                     case "SCOREINIT":
                         course = parsedTja.courses[currentCourse];
-                        course.scoreInit = value != "" ? int.Parse(value.Split(",").Last()) : 300;
+                            if (value.Contains(","))
+                        {
+                                Console.WriteLine($"SCOREINIT split: {value.Split(',')[0]} {value.Split(',')[1]}");
+                                // This is an explicit initializer of scoreInit and shinuti
+                                course.shinutiScore = int.Parse(value.Split(',')[1]);
+                                course.scoreInit = int.Parse(value.Split(',')[0]);
+                        } else
+                        {
+                                course.scoreInit = value != "" ? int.Parse(value) : 300;
+                        }
                         parsedTja.courses[currentCourse] = course;
                         break;
                     case "SCOREDIFF":

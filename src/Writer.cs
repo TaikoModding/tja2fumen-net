@@ -16,6 +16,7 @@ namespace tja2fumen
             {
                 bw.Write(song.header.rawBytes);
 
+                Console.WriteLine($"FIRST OFFSET: {song.measures[0].offsetStart}");
                 foreach (FumenMeasure measure in song.measures)
                 {
 
