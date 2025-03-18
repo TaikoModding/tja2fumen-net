@@ -28,6 +28,8 @@ namespace tja2fumen
         public float offset;
         public string course = "";
         public Int32 level;
+        public Int32 scoreMode;
+        public Int32 shinutiScore;
         public List<Int32> balloon = new ();
         // Set defaults for SCOREINIT and SCOREDIFF to handle TJAs that leave them out entirely
         public Int32 scoreInit = 300;

@@ -212,7 +212,7 @@ namespace tja2fumen
             return tjaBranchesProcessed;
         }
 
-        public static FumenCourse ConvertTjaToFumen(TJACourse tja, bool convertSilently = false)
+        public static FumenCourse ConvertTjaToFumen(string course, TJACourse tja, bool convertSilently = false)
         {
             var tjaBranchesProcessed = ProcessComands(tja.branches, tja.bpm);
 
@@ -222,6 +222,7 @@ namespace tja2fumen
             fumen.hasBranches = tja.hasBranches;
             fumen.measures = new List<FumenMeasure>();
             fumen.diff = tja.course;
+            fumen.shinuchiScore = tja.shinutiScore;
             
             for (int i = 0; i < nMeasures; i++)
             {
@@ -244,11 +245,14 @@ namespace tja2fumen
             var courseBallons = new List<int>(tja.balloon);
 
             var totalNotes = new Dictionary<string, int> { { "normal", 0 }, { "professional", 0 }, { "master", 0 } };
+            var totalNoteValues = new Dictionary<string, int> { { "normal", 0 }, { "professional", 0 }, { "master", 0 } };
             var totalBallonsHits = new Dictionary<string, int> { { "normal", 0 }, { "professional", 0 }, { "master", 0 } };
-
+            var totalDrumrolls = 0;
+            var totalBigDrumrolls = 0;
             var totalDrumrollsDuration = new Dictionary<string, float> { { "normal", 0 }, { "professional", 0 }, { "master", 0 } };
             List<string>? branchTypes = null;
             List<(float, float)>? branchConditions = null;
+
             foreach (var pair in tjaBranchesProcessed)
             {
                 var currentBranch = pair.Key;
@@ -262,6 +266,7 @@ namespace tja2fumen
                 var branchPointsTotal = 0;
                 var branchPointsMeasure = 0;
                 var currentDrumRoll = new FumenNote();
+                var currentDrumRollMultiplier = 1;
                 var currentLevelhold = false;
                 branchTypes = new List<string>();
                 branchConditions = new List<(float, float)>();
@@ -350,9 +355,16 @@ namespace tja2fumen
                                 // Alr?
                                 currentDrumRoll.duration += notePos - 0.0f;
                             }
-                            totalDrumrollsDuration[currentBranch] += currentDrumRoll.duration;
+                           
+                            //Console.WriteLine($"Incrementing duration by {currentDrumRoll.duration} {currentDrumRoll.noteType}");
+                            if (currentDrumRoll.noteType.ToLower() == "drumroll")
+                            {
+                                totalDrumrollsDuration[currentBranch] += (currentDrumRoll.duration * currentDrumRollMultiplier);
+                            }
                             currentDrumRoll.duration = (float)((int)currentDrumRoll.duration);
+                            //Console.WriteLine($"Resetting duration to {currentDrumRoll.duration}");
                             currentDrumRoll = new FumenNote();
+                            //currentDrumRollMultiplier = 0;
                             continue;
                         }
 
@@ -381,8 +393,14 @@ namespace tja2fumen
                         switch (note.noteType)
                         {
                         case "Drumroll":
+                            currentDrumRoll = note;
+                            currentDrumRollMultiplier = 1;
+                            totalDrumrolls++;
+                            break;
                         case "DRUMROLL":
                             currentDrumRoll = note;
+                            currentDrumRollMultiplier = 2;
+                            totalBigDrumrolls++;
                             break;
                         case "Balloon":
                         case "Kusudama":
@@ -409,6 +427,7 @@ namespace tja2fumen
                             if (note.noteType.ToLower().StartsWith("don") || note.noteType.ToLower().StartsWith("ka"))
                             {
                                 totalNotes[currentBranch] += 1;
+                                totalNoteValues[currentBranch] += 1;
                             }
                             break;
                         }
@@ -421,6 +440,7 @@ namespace tja2fumen
                             break;
                         case "DON":
                         case "KA":
+                            totalNoteValues[currentBranch] += 1;
                             ptsToAdd = fumen.header.b484_b487_branch_pts_good_big;
                             break;
                         case "Balloon":
@@ -519,18 +539,65 @@ namespace tja2fumen
             if (totalNotes["professional"] != 0)
             {
                 fumen.header.b460_b463_normal_professional_ratio =
-                    (int)(65536 * (totalNotes["normal"] / totalNotes["professional"]));
+                    (int)((65536 * (totalNotes["normal"]) / totalNotes["professional"]));
             }
 
             if (totalNotes["master"] != 0)
             {
                 fumen.header.b464_b467_normal_master_ratio =
-                    (int)(65536 * (totalNotes["normal"] / totalNotes["master"]));
+                    (int)((65536 * (totalNotes["normal"]) / totalNotes["master"]));
+                //Console.WriteLine($"totalNotes: {totalNotes["normal"]} {totalNotes["professional"]} {totalNotes["master"]}");
+                //Console.WriteLine($"ratios: {fumen.header.b460_b463_normal_professional_ratio} {fumen.header.b464_b467_normal_master_ratio}");
             }
-            var totalScore = (1000000.0 - (totalBallonsHits.Values.Max() * 100) -
-                totalDrumrollsDuration.Values.Max() * 1.6920079999994086) / totalNotes.Values.Max();
-            fumen.shinuchiScore = (int)(Math.Ceiling(totalScore / 10) * 10);
 
+            // For balloons, the last hit that pops the balloon awards 5000 points, and previous hits award 300 apiece.
+            var balloonScore = ((totalBallonsHits.Values.Max() - tja.balloon.Count) * 300) + (tja.balloon.Count * 5000);
+
+            // This scaling factor was empirically determined from a few reference files.
+            //var drumRollScore = ((totalDrumrollsDuration.Values.Max()) * .872 );
+            var drumRollScore = (totalBigDrumrolls * 200) +  (totalDrumrolls * 100) + (totalDrumrollsDuration.Values.Max());
+            if (course == "Hard")
+            {
+                drumRollScore *= .85f;
+            } else if (course == "Easy")
+            {
+                drumRollScore *= 1.269f;
+            } else if (course == "Normal")
+            {
+                drumRollScore *= 1.487f;
+            } else if (course == "Oni")
+            {
+                drumRollScore *= 1.34f;
+            }
+
+            // The linearizedScore is the contribution of hitting notes, which is a function of the total note quantity, which
+            // is 1 per small note + 2 per large note.
+            var linearizedScore = (1000000.0 - balloonScore - drumRollScore);
+
+            // The total score is the value for each note hit. The rounding machinations ensure that it's the smallest multiple of
+            // 10 that results in a score >= 1000000
+            var totalScore = linearizedScore / totalNoteValues.Values.Max();
+
+            var guessedScore = (int)(Math.Ceiling(totalScore / 10) * 10);
+
+            if (fumen.shinuchiScore != 0 && course == "Oni")
+            {
+                //Console.WriteLine($"SCORE CHECK Computed: {guessedScore} Actual: {fumen.shinuchiScore}");
+            }
+
+            if (Math.Abs(guessedScore - fumen.shinuchiScore) > 10)
+            {
+                fumen.shinuchiScore = guessedScore;
+            }
+
+            /*
+            Console.WriteLine($"Fractional score: {totalScore / 10}");
+            Console.WriteLine($"shinuchiScore: {fumen.shinuchiScore} {fumen.shinuchiScore * totalNotes.Values.Max()}");
+            Console.WriteLine($"{balloonScore} {drumRollScore} {linearizedScore}");
+            Console.WriteLine($"Drumrolls: {totalDrumrolls} {totalBigDrumrolls} {totalDrumrollsDuration.Values.Max()}");
+            Console.WriteLine($"Balloons: {balloonScore} {totalBallonsHits.Values.Max()} {tja.balloon.Count}");
+            Console.WriteLine($"Notes: {totalNotes.Values.Max()} {totalNoteValues.Values.Max()}");
+            */
             return fumen;
         }
 
