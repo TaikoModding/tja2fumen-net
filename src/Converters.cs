@@ -56,7 +56,7 @@ namespace tja2fumen
                             measureTjaProcessed.notes.Add(data);
                             break;
                         case "delay":
-                            measureTjaProcessed.delay = float.Parse(data.value) * 1000;
+                            measureTjaProcessed.delay = float.Parse(data.value, CultureInfo.InvariantCulture) * 1000;
                             break;
                         case "branch_start":
                             var branchParts = data.value.Split(',');
@@ -93,7 +93,7 @@ namespace tja2fumen
                             measureTjaProcessed.levelHold = true;
                             break;
                         case "barline":
-                            currentBarline = int.Parse(data.value) != 0;
+                            currentBarline = int.Parse(data.value, CultureInfo.InvariantCulture) != 0;
                             measureTjaProcessed.barline = currentBarline;
                             break;
                         case "measure":
@@ -102,8 +102,8 @@ namespace tja2fumen
                             {
                                 continue;
                             }
-                            currentDividend = int.Parse(matchMeasure.Groups[1].Value);
-                            currentDivisor = int.Parse(matchMeasure.Groups[2].Value);
+                            currentDividend = int.Parse(matchMeasure.Groups[1].Value, CultureInfo.InvariantCulture);
+                            currentDivisor = int.Parse(matchMeasure.Groups[2].Value, CultureInfo.InvariantCulture);
                             measureTjaProcessed.timeSignature = new List<int> { currentDividend, currentDivisor };
                             break;
 
@@ -128,7 +128,7 @@ namespace tja2fumen
                                 newVal = currentGoGo;
                                 break;
                             case "senote":
-                                currentSenote = Constants.SENOTECHANGE_TYPES[int.Parse(data.value)];
+                                currentSenote = Constants.SENOTECHANGE_TYPES[int.Parse(data.value, CultureInfo.InvariantCulture)];
                                 newVal = currentSenote;
                                 break;
                             }
