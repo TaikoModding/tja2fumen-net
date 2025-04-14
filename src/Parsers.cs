@@ -108,11 +108,11 @@ namespace tja2fumen
                         currentCourseBasename = currentCourse;
                         break;
                     case "LEVEL":
-                        if (!int.TryParse(value, out _))
+                        if (!float.TryParse(value, NumberStyles.Float | NumberStyles.AllowThousands,  CultureInfo.InvariantCulture, out _))
                         {
                             throw new Exception($"Invalid LEVEL value: '{value}'");
                         }
-                        var parsedLevel = Math.Min(Math.Max(int.Parse(value), 1), 10);
+                        var parsedLevel = Math.Min(Math.Max((int)Math.Floor(float.Parse(value, CultureInfo.InvariantCulture)), 1), 10);
                         course = parsedTja.courses[currentCourse];
                         course.level = parsedLevel;
                         parsedTja.courses[currentCourse] = course;
@@ -120,7 +120,7 @@ namespace tja2fumen
 
                     case "SCOREMODE":
                         course = parsedTja.courses[currentCourse];
-                        course.scoreMode = int.Parse(value);
+                        course.scoreMode = int.Parse(value, CultureInfo.InvariantCulture);
                         break;
                     case "SCOREINIT":
                         course = parsedTja.courses[currentCourse];
@@ -128,17 +128,17 @@ namespace tja2fumen
                         {
                                 Console.WriteLine($"SCOREINIT split: {value.Split(',')[0]} {value.Split(',')[1]}");
                                 // This is an explicit initializer of scoreInit and shinuti
-                                course.shinutiScore = int.Parse(value.Split(',')[1]);
-                                course.scoreInit = int.Parse(value.Split(',')[0]);
+                                course.shinutiScore = int.Parse(value.Split(',')[1], CultureInfo.InvariantCulture);
+                                course.scoreInit = int.Parse(value.Split(',')[0], CultureInfo.InvariantCulture);
                         } else
                         {
-                                course.scoreInit = value != "" ? int.Parse(value) : 300;
+                                course.scoreInit = value != "" ? int.Parse(value, CultureInfo.InvariantCulture) : 300;
                         }
                         parsedTja.courses[currentCourse] = course;
                         break;
                     case "SCOREDIFF":
                         course = parsedTja.courses[currentCourse];
-                        course.scoreDiff = value != "" ? int.Parse(value.Split(",").Last()) : 120;
+                        course.scoreDiff = value != "" ? int.Parse(value.Split(",").Last(), CultureInfo.InvariantCulture) : 120;
                         parsedTja.courses[currentCourse] = course;
                         break;
                     case "BALLOON":
@@ -155,7 +155,7 @@ namespace tja2fumen
                                     }
                             balloons = value.Split(",")
                                                      .Select(v =>
-                                                             { return int.Parse(v); })
+                                                             { return int.Parse(v, CultureInfo.InvariantCulture); })
                                                      .ToList();
                                 }
                                 catch
@@ -409,7 +409,7 @@ namespace tja2fumen
                             break;
 
                         case "DEMOSTART":
-                            float.TryParse(value, out metadata.demoStart);
+                            float.TryParse(value, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out metadata.demoStart);
                             break;
 
                         case "WAVE":

@@ -19,6 +19,7 @@ using VGAudio.Codecs.CriHca;
 using VGAudio.Formats.CriHca;
 using NAudio.Utils;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace tja2fumen
 {
@@ -116,7 +117,7 @@ namespace tja2fumen
                 int version = 0;
                 if (m.Success) {
                     var versionString = m.Result("${version}");
-                    version = Int32.Parse(versionString);
+                    version = Int32.Parse(versionString, CultureInfo.InvariantCulture);
                 }
                 return version < TEKA_TEKA_VERSION_NUMBER;
             }
